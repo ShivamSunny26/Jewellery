@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import Base, engine
+from seed import seed_if_empty
 from app.routers import (
     admin_auth,
     admin_categories,
@@ -20,6 +21,7 @@ from app.routers import (
 )
 
 Base.metadata.create_all(bind=engine)
+seed_if_empty()
 
 app = FastAPI(title="Shree Om Jwellers API", version="1.0.0")
 

@@ -89,11 +89,7 @@ def make_placeholder(subdir: str, label: str, color: str) -> str:
     return f"{BASE}/media/{subdir}/{name}"
 
 
-def seed():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-
+def _populate(db):
     admin = Admin(
         username="admin",
         password_hash=hash_password("admin123"),
@@ -168,6 +164,29 @@ def seed():
     db.close()
     print("Seed complete.")
     print("Admin login: admin / admin123")
+
+
+def seed():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        _populate(db)
+    finally:
+        db.close()
+
+
+def seed_if_empty():
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        if db.query(Admin).first() is not None:
+            print("Database already has data — skipping auto-seed.")
+            return
+        _populate(db)
+        print("Auto-seed complete. Admin login: admin / admin123")
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
