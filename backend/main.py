@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -20,10 +22,20 @@ from app.routers import (
     public_rates,
 )
 
-Base.metadata.create_all(bind=engine)
-seed_if_empty()
 
-app = FastAPI(title="Shree Om Jwellers API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        Base.metadata.create_all(bind=engine)
+        seed_if_empty()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"WARNING: Database not available at startup: {e}")
+        print("Server will start but DB-dependent endpoints will fail until connectivity is restored.")
+    yield
+
+
+app = FastAPI(title="Shree Om Jwellers API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
