@@ -13,10 +13,23 @@ async function request(path, options = {}) {
   return res.json()
 }
 
+function qs(params = {}) {
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && v !== ''
+  )
+  if (!entries.length) return ''
+  return `?${entries
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&')}`
+}
+
 export const api = {
   categories: () => request('/categories'),
-  ornaments: (category) => request(`/ornaments${category ? `?category=${category}` : ''}`),
+  ornaments: (params = {}) => request(`/ornaments${qs(params)}`),
+  purities: () => request('/ornaments/purities'),
   ornament: (id) => request(`/ornaments/${id}`),
   rates: () => request('/rates/current'),
-  enquiry: (payload) => request('/enquiries', { method: 'POST', body: JSON.stringify(payload) })
+  rateHistory: (days = 30) => request(`/rates/history${qs({ days })}`),
+  enquiry: (payload) =>
+    request('/enquiries', { method: 'POST', body: JSON.stringify(payload) })
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api.js'
+import LineChart from '../components/LineChart.jsx'
 
 function fmtTime(iso) {
   if (!iso) return '—'
@@ -9,34 +10,70 @@ function fmtTime(iso) {
     d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
 }
 
+const formatINR = (v) => `₹${Math.round(v).toLocaleString('en-IN')}`
+
 export default function Rates() {
   const [gold, setGold] = useState('')
   const [silver, setSilver] = useState('')
+  const [initial, setInitial] = useState({ gold: '', silver: '' })
   const [goldHist, setGoldHist] = useState([])
   const [silverHist, setSilverHist] = useState([])
+  const [history, setHistory] = useState(null)
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
   function load() {
-    api.rateHistory('gold').then(setGoldHist)
-    api.rateHistory('silver').then(setSilverHist)
-    fetch('/api/v1/rates/current').then((r) => r.json()).then((cur) => {
-      if (cur.gold) setGold(String(cur.gold.rate_value))
-      if (cur.silver) setSilver(String(cur.silver.rate_value))
-    }).catch(() => {})
+    Promise.all([
+      api.rateHistory('gold'),
+      api.rateHistory('silver'),
+      api.currentRates(),
+      api.rateHistoryPublic(30)
+    ])
+      .then(([g, s, cur, hist]) => {
+        setGoldHist(g)
+        setSilverHist(s)
+        setHistory(hist)
+        const next = {
+          gold: cur.gold ? String(cur.gold.rate_value) : '',
+          silver: cur.silver ? String(cur.silver.rate_value) : ''
+        }
+        setGold(next.gold)
+        setSilver(next.silver)
+        setInitial(next)
+      })
+      .catch((e) => setErr(e.message))
   }
+
   useEffect(load, [])
 
   async function save(e) {
     e.preventDefault()
-    setBusy(true); setMsg(''); setErr('')
+    setBusy(true)
+    setMsg('')
+    setErr('')
     try {
-      await api.setRate({ metal: 'gold', rate_value: Number(gold), purity_reference: '22K' })
-      await api.setRate({ metal: 'silver', rate_value: Number(silver), purity_reference: '92.5' })
+      const changes = []
+      if (gold !== initial.gold) {
+        changes.push({ metal: 'gold', rate_value: Number(gold), purity_reference: '22K' })
+      }
+      if (silver !== initial.silver) {
+        changes.push({ metal: 'silver', rate_value: Number(silver), purity_reference: '92.5' })
+      }
+      if (changes.length === 0) {
+        setMsg('Nothing changed — rates are already up to date.')
+        return
+      }
+      for (const change of changes) {
+        await api.setRate(change)
+      }
       setMsg('Rates updated. The bubbles on the customer site are now live.')
       load()
-    } catch (e2) { setErr(e2.message) } finally { setBusy(false) }
+    } catch (e2) {
+      setErr(e2.message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -50,16 +87,34 @@ export default function Rates() {
       <form onSubmit={save} className="form-card">
         <div className="field">
           <label>Gold Rate (₹ per gram, 22K)</label>
-          <input type="number" step="0.01" value={gold} onChange={(e) => setGold(e.target.value)} required />
+          <input type="number" step="0.01" min="1" value={gold} onChange={(e) => setGold(e.target.value)} required />
         </div>
         <div className="field">
           <label>Silver Rate (₹ per gram)</label>
-          <input type="number" step="0.01" value={silver} onChange={(e) => setSilver(e.target.value)} required />
+          <input type="number" step="0.01" min="1" value={silver} onChange={(e) => setSilver(e.target.value)} required />
         </div>
         <button className="btn-primary" type="submit" disabled={busy}>
           {busy ? 'Saving…' : 'Save Rate'}
         </button>
       </form>
+
+      <div style={{ marginTop: '20px' }}>
+        <h3 style={{ fontFamily: 'var(--serif)', margin: '0 0 10px' }}>30-day trend</h3>
+        <div className="form-card">
+          {history && (history.gold.length > 0 || history.silver.length > 0) ? (
+            <LineChart
+              height={150}
+              format={formatINR}
+              series={[
+                { key: 'gold', label: 'Gold', color: '#C9A227', points: history.gold },
+                { key: 'silver', label: 'Silver', color: '#C7CCD1', points: history.silver }
+              ]}
+            />
+          ) : (
+            <div className="empty">No history yet — today's entry starts the chart.</div>
+          )}
+        </div>
+      </div>
 
       <div style={{ marginTop: '20px' }}>
         <h3 style={{ fontFamily: 'var(--serif)', margin: '0 0 10px' }}>Gold Rate History</h3>

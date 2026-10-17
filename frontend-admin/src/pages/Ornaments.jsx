@@ -9,19 +9,27 @@ export default function Ornaments() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.ornaments().then(setItems).finally(() => setLoading(false))
+    api.ornaments().then(setItems).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   async function toggle(o) {
     const next = !o.is_visible
-    await api.setVisibility(o.id, next)
-    setItems((prev) => prev.map((x) => (x.id === o.id ? { ...x, is_visible: next } : x)))
+    try {
+      await api.setVisibility(o.id, next)
+      setItems((prev) => prev.map((x) => (x.id === o.id ? { ...x, is_visible: next } : x)))
+    } catch (e) {
+      alert(`Could not update visibility: ${e.message}`)
+    }
   }
 
   async function del(o) {
     if (!confirm(`Delete "${o.name}"? This cannot be undone.`)) return
-    await api.deleteOrnament(o.id)
-    setItems((prev) => prev.filter((x) => x.id !== o.id))
+    try {
+      await api.deleteOrnament(o.id)
+      setItems((prev) => prev.filter((x) => x.id !== o.id))
+    } catch (e) {
+      alert(`Could not delete: ${e.message}`)
+    }
   }
 
   const filtered = items.filter((o) =>

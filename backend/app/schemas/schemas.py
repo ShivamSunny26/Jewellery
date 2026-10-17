@@ -1,16 +1,15 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CategoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     slug: str
-
-    class Config:
-        from_attributes = True
 
 
 class OrnamentCard(BaseModel):
@@ -20,9 +19,6 @@ class OrnamentCard(BaseModel):
     purity: Optional[str] = None
     approx_weight_grams: Optional[float] = None
     thumbnail_url: Optional[str] = None
-
-    class Config:
-        from_attributes = True
 
 
 class OrnamentDetail(BaseModel):
@@ -36,8 +32,13 @@ class OrnamentDetail(BaseModel):
     model_url: Optional[str] = None
     photos: List[str] = []
 
-    class Config:
-        from_attributes = True
+
+class OrnamentList(BaseModel):
+    items: List[OrnamentCard]
+    total: int
+    page: int
+    page_size: int
+    pages: int
 
 
 class RateInfo(BaseModel):
@@ -50,6 +51,16 @@ class RateInfo(BaseModel):
 class CurrentRates(BaseModel):
     gold: Optional[RateInfo] = None
     silver: Optional[RateInfo] = None
+
+
+class RatePoint(BaseModel):
+    date: str
+    rate_value: float
+
+
+class RateHistory(BaseModel):
+    gold: List[RatePoint] = []
+    silver: List[RatePoint] = []
 
 
 class EnquiryCreate(BaseModel):
@@ -69,9 +80,6 @@ class EnquiryOut(BaseModel):
     status: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class AdminLogin(BaseModel):
     username: str
@@ -79,10 +87,10 @@ class AdminLogin(BaseModel):
 
 
 class AdminProfile(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     username: str
     full_name: Optional[str] = None
     last_login_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True

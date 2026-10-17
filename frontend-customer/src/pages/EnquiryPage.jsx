@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
-
-const SHOP_WHATSAPP = '919876543210'
-const SHOP_PHONE = '+91 98765 43210'
+import { telLink, waLink } from '../lib/shop.js'
 
 export default function EnquiryPage() {
   const [params] = useSearchParams()
-  const navigate = useNavigate()
   const ornamentId = params.get('ornament')
 
   const [ornamentName, setOrnamentName] = useState('')
@@ -17,6 +14,7 @@ export default function EnquiryPage() {
   const [status, setStatus] = useState('idle')
 
   useEffect(() => {
+    document.title = `Enquire · Shree Om Jwellers`
     if (ornamentId) {
       api.ornament(ornamentId)
         .then((o) => {
@@ -43,9 +41,9 @@ export default function EnquiryPage() {
     }
   }
 
-  const waMsg = encodeURIComponent(
-    ornamentName ? `Hello! I'd like to know more about "${ornamentName}".` : 'Hello! I have a question about your jewellery.'
-  )
+  const waText = ornamentName
+    ? `Hello! I'd like to know more about "${ornamentName}".`
+    : 'Hello! I have a question about your jewellery.'
 
   return (
     <div style={{ padding: '16px 16px 24px' }}>
@@ -57,8 +55,8 @@ export default function EnquiryPage() {
       </div>
 
       <div className="quick-contact">
-        <a className="whatsapp" href={`https://wa.me/${SHOP_WHATSAPP}?text=${waMsg}`} target="_blank" rel="noreferrer">WhatsApp</a>
-        <a className="call" href={`tel:${SHOP_PHONE.replace(/\s/g, '')}`}>Call Shop</a>
+        <a className="whatsapp" href={waLink(waText)} target="_blank" rel="noreferrer">WhatsApp</a>
+        <a className="call" href={telLink()}>Call Shop</a>
       </div>
 
       <div className="form-card">
@@ -74,7 +72,18 @@ export default function EnquiryPage() {
             </div>
             <div className="field">
               <label>Phone Number</label>
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} required type="tel" placeholder="e.g. 9876543210" />
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                type="tel"
+                inputMode="tel"
+                minLength={7}
+                maxLength={15}
+                pattern="[0-9+ ]{7,15}"
+                title="Enter a valid phone number (7–15 digits)"
+                placeholder="e.g. 9876543210"
+              />
             </div>
             <div className="field">
               <label>Message</label>

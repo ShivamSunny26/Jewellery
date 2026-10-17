@@ -2,18 +2,28 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import OrnamentCard from '../components/OrnamentCard.jsx'
+import { GridSkeleton } from '../components/Skeletons.jsx'
+import { getRecent } from '../lib/store.js'
 
 export default function Home() {
   const [cats, setCats] = useState([])
   const [featured, setFeatured] = useState([])
+  const [recent, setRecent] = useState([])
   const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState(null)
 
   useEffect(() => {
-    Promise.all([api.categories(), api.ornaments()])
+    document.title = 'Shree Om Jwellers — Gold & Silver Jewellery Catalogue'
+    setRecent(getRecent())
+    Promise.all([
+      api.categories(),
+      api.ornaments({ sort: 'newest', page_size: 6 })
+    ])
       .then(([c, o]) => {
         setCats(c)
-        setFeatured(o)
+        setFeatured(o.items)
       })
+      .catch((e) => setErr(e.message))
       .finally(() => setLoading(false))
   }, [])
 
@@ -40,10 +50,38 @@ export default function Home() {
         ))}
       </div>
 
+      {recent.length > 0 && (
+        <>
+          <div className="section">
+            <h3>Recently Viewed</h3>
+          </div>
+          <div className="recent-strip">
+            {recent.map((r) => (
+              <Link key={r.id} to={`/ornament/${r.id}`} className="recent-item">
+                {r.thumbnail ? (
+                  <img src={r.thumbnail} alt={r.name} loading="lazy" />
+                ) : (
+                  <div className="card-fallback small" aria-hidden="true">SOJ</div>
+                )}
+                <span>{r.name}</span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="section">
-        <h3>Featured Pieces</h3>
-        {loading ? (
-          <div className="loading"><div className="spinner" /></div>
+        <div className="section-head">
+          <h3>Latest Pieces</h3>
+          <Link to="/search" className="link-btn">View all</Link>
+        </div>
+        {err ? (
+          <div className="error-box">
+            Could not load the collection.{' '}
+            <button className="link-btn" onClick={() => window.location.reload()}>Retry</button>
+          </div>
+        ) : loading ? (
+          <GridSkeleton count={4} />
         ) : featured.length === 0 ? (
           <div className="empty">Collection coming soon. Visit us in store.</div>
         ) : (

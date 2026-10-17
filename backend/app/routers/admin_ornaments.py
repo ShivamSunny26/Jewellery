@@ -9,6 +9,7 @@ from app.schemas.admin_schemas import (
     AdminOrnamentUpdate,
     VisibilityUpdate,
 )
+from app.routers.admin_media import delete_media_file
 
 router = APIRouter(
     prefix="/admin/ornaments", tags=["admin-ornaments"], dependencies=[Depends(get_current_admin)]
@@ -38,11 +39,24 @@ def _out(o: Ornament):
 
 
 @router.get("")
-def list_ornaments(db: Session = Depends(get_db)):
+def list_ornaments(
+    q: str | None = None,
+    visible: bool | None = None,
+    limit: int = 200,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Ornament)
+    if q:
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            Ornament.name.ilike(term) | Ornament.description.ilike(term)
+        )
+    if visible is not None:
+        query = query.filter(Ornament.is_visible == visible)
     rows = (
-        db.query(Ornament)
-        .options(joinedload(Ornament.media), joinedload(Ornament.category))
+        query.options(joinedload(Ornament.media), joinedload(Ornament.category))
         .order_by(Ornament.created_at.desc())
+        .limit(min(limit, 500))
         .all()
     )
     return [_out(o) for o in rows]
@@ -50,7 +64,7 @@ def list_ornaments(db: Session = Depends(get_db)):
 
 @router.post("")
 def create_ornament(payload: AdminOrnamentCreate, db: Session = Depends(get_db)):
-    o = Ornament(**payload.dict())
+    o = Ornament(**payload.model_dump())
     db.add(o)
     db.commit()
     db.refresh(o)
@@ -77,7 +91,7 @@ def update_ornament(
     o = db.query(Ornament).filter(Ornament.id == ornament_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Ornament not found")
-    data = payload.dict(exclude_unset=True)
+    data = payload.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(o, k, v)
     db.commit()
@@ -99,9 +113,17 @@ def set_visibility(
 
 @router.delete("/{ornament_id}")
 def delete_ornament(ornament_id: int, db: Session = Depends(get_db)):
-    o = db.query(Ornament).filter(Ornament.id == ornament_id).first()
+    o = (
+        db.query(Ornament)
+        .options(joinedload(Ornament.media))
+        .filter(Ornament.id == ornament_id)
+        .first()
+    )
     if not o:
         raise HTTPException(status_code=404, detail="Ornament not found")
+    media_urls = [m.url for m in o.media]
     db.delete(o)
     db.commit()
+    for url in media_urls:
+        delete_media_file(url)
     return {"ok": True}

@@ -1,6 +1,4 @@
-from datetime import datetime
-
-from sqlalchemy import (
+﻿from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
@@ -14,6 +12,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from app.core.timeutils import utcnow
 
 
 class Admin(Base):
@@ -23,7 +22,7 @@ class Admin(Base):
     username = Column(String(50), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
     last_login_at = Column(DateTime, nullable=True)
 
     rates = relationship("Rate", back_populates="admin")
@@ -36,7 +35,7 @@ class Category(Base):
     name = Column(String(80), unique=True, nullable=False)
     slug = Column(String(80), unique=True, nullable=False, index=True)
     display_order = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     ornaments = relationship(
         "Ornament", back_populates="category", cascade="all, delete-orphan"
@@ -55,8 +54,8 @@ class Ornament(Base):
     making_charge_note = Column(String(255), nullable=True)
     is_visible = Column(Boolean, default=True, index=True)
     model_url = Column(String(500), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     category = relationship("Category", back_populates="ornaments")
     media = relationship(
@@ -76,7 +75,7 @@ class OrnamentMedia(Base):
     media_type = Column(Enum("photo", "model", name="media_type"), nullable=False)
     url = Column(String(500), nullable=False)
     sort_order = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     ornament = relationship("Ornament", back_populates="media")
 
@@ -91,7 +90,7 @@ class Rate(Base):
     purity_reference = Column(String(20), nullable=True)
     is_active = Column(Boolean, default=False, index=True)
     set_by_admin_id = Column(Integer, ForeignKey("admins.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     admin = relationship("Admin", back_populates="rates")
 
@@ -109,6 +108,6 @@ class Enquiry(Base):
     status = Column(
         Enum("new", "read", "resolved", name="enquiry_status"), default="new", index=True
     )
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     ornament = relationship("Ornament", back_populates="enquiries")

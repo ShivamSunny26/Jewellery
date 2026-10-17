@@ -1,14 +1,14 @@
-from datetime import datetime
-
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+﻿from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_admin
 from app.core.rate_limit import limiter
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, hash_password, verify_password
+from app.core.timeutils import utcnow
 from app.models.models import Admin
+from app.schemas.admin_schemas import AdminProfileUpdate, PasswordChange
 from app.schemas.schemas import AdminLogin, AdminProfile
 
 router = APIRouter(prefix="/admin", tags=["admin-auth"])
@@ -36,7 +36,7 @@ def login(
         max_age=settings.JWT_EXPIRE_MINUTES * 60,
         path="/",
     )
-    admin.last_login_at = datetime.utcnow()
+    admin.last_login_at = utcnow()
     db.commit()
     return admin
 
@@ -50,3 +50,39 @@ def logout(response: Response):
 @router.get("/me", response_model=AdminProfile)
 def me(admin: Admin = Depends(get_current_admin)):
     return admin
+
+
+@router.put("/me", response_model=AdminProfile)
+def update_me(
+    payload: AdminProfileUpdate,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    admin.full_name = payload.full_name
+    db.commit()
+    db.refresh(admin)
+    return admin
+
+
+@router.post("/change-password")
+def change_password(
+    payload: PasswordChange,
+    request: Request,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    client_ip = request.client.host if request.client else "unknown"
+    limiter.check(f"chpwd:{client_ip}:{admin.id}", limit=5, window_seconds=900)
+    if not verify_password(payload.current_password, admin.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+    if verify_password(payload.new_password, admin.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must differ from the current one",
+        )
+    admin.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return {"ok": True}

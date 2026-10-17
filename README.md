@@ -28,19 +28,25 @@ A mobile-first digital catalogue for **Shree Om Jwellers**, a physical jewellery
 ### Customer Website
 - **Home** — hero banner, category chips, featured ornaments grid
 - **Category browsing** — Rings, Necklaces, Bangles, Earrings, Bridal Sets (filtered 2-column grid)
-- **Ornament detail** — interactive **3D viewer** (rotate / pinch-zoom / auto-rotate / AR via `<model-viewer>`) with photo-gallery fallback; purity, weight, description, making charge
+- **Search & filters** — live search (`/search`), filter by category/purity, sort by name/weight/price/making charge, price range
+- **Ornament detail** — interactive **3D viewer** (rotate / pinch-zoom / auto-rotate / AR via `<model-viewer>`) with photo-gallery fallback; purity, weight, description, making charge, **live price estimate** (rate × weight + making charge)
 - **Live rate bubbles** — floating gold & silver rate bubbles on every page; tap to expand; auto-refreshes every 5 minutes
+- **Rate history** — 30-day gold/silver line chart on `/rates`
+- **Wishlist** — save favourites locally, `/wishlist` page, one-tap enquiry from any saved piece
+- **Recently viewed** — horizontal strip on home & category pages
 - **Enquiry** — form (name / phone / message, ornament pre-filled), WhatsApp button, and call button
 - **Store info** — address, OpenStreetMap embed, hours, phone / WhatsApp
+- **SEO & PWA** — per-page titles/descriptions, Open Graph/Twitter cards, JSON-LD `JewelryStore`, dynamic `/robots.txt` + `/sitemap.xml` from the API, web manifest + icons
 
 ### Admin Panel (phone-friendly)
-- JWT-protected login (`AuthGuard`)
-- Dashboard with quick actions and unread enquiry badge
-- Ornament CRUD with multi-photo upload and **GLB / glTF 3D model upload**
-- Show / hide (visibility toggle) for ornaments
+- JWT-protected login (`AuthGuard`) with session restore on refresh
+- **Analytics dashboard** — stat tiles, today's rates, 30-day rate line chart, 30-day enquiry bar chart, top categories, recent enquiries
+- Ornament CRUD with multi-photo upload and **GLB / glTF 3D model upload**; search + visibility filter
+- Show / hide (visibility toggle) for ornaments (deletes files from disk on removal)
 - Category management
-- Daily gold (22K) & silver (92.5) rate updates with per-metal history
-- Enquiry inbox with status (new / read / resolved) and one-tap call
+- Daily gold (22K) & silver (92.5) rate updates with per-metal history + 30-day trend chart; only changed values are saved
+- Enquiry inbox with status (new / read / resolved), one-tap call & WhatsApp (number normalized to `wa.me` format)
+- **Account page** — change display name and password (`PUT /admin/me`, `POST /admin/change-password`)
 
 ### Security
 - JWT (HS256) stored in an **HTTP-only cookie**
@@ -73,20 +79,24 @@ jewellery/
 ├── backend/                  FastAPI REST API
 │   ├── main.py               App entry + startup (auto-create tables & seed)
 │   ├── seed.py               Seed script (manual re-seed)
-│   ├── requirements.txt
-│   ├── .env                  DATABASE_URL, JWT_SECRET, CORS, media path
-│   ├── media/                Uploaded photos + placeholder SVGs
+│   ├── alembic.ini + alembic/   DB migrations (baseline: 7c77ef4180df)
+│   ├── tests/                pytest suite (public API, admin auth/CRUD, SEO)
+│   ├── pytest.ini
+│   ├── requirements.txt / requirements-dev.txt
+│   ├── .env.example          Copy to .env (never commit .env)
+│   ├── media/                Uploaded photos + placeholder SVGs (gitignored)
 │   └── app/
-│       ├── core/             config, database, deps, security, rate_limit
+│       ├── core/             config, database, deps, security, rate_limit, timeutils
 │       ├── models/           SQLAlchemy models
 │       ├── schemas/          Pydantic schemas (public + admin)
-│       └── routers/          4 public + 6 admin routers
+│       └── routers/          5 public + 8 admin routers
 ├── frontend-customer/        React app (port 3000)
-│   └── src/                  Home, CategoryPage, OrnamentDetail, Enquiry,
-│                             StoreInfo, RateBubbles, ModelViewer3D
+│   └── src/                  Home, Search, Category, OrnamentDetail, Wishlist,
+│                             Rates (line chart), Enquiry, StoreInfo, 404,
+│                             RateBubbles, OrnamentExplorer, ModelViewer3D
 ├── frontend-admin/           React app (port 3001)
-│   └── src/                  Login, Dashboard, Ornaments, Categories,
-│                             Rates, Enquiries
+│   └── src/                  Login, Dashboard (analytics), Ornaments,
+│                             Categories, Rates, Enquiries, Account
 ├── doc/                      11 project documents (PRD … Developer Docs)
 └── LICENSE                   MIT © 2026 ShivamSunny26
 ```
@@ -136,6 +146,28 @@ On first startup the app **automatically creates all tables and seeds sample dat
 python seed.py
 ```
 
+### Database migrations (Alembic)
+
+Schema changes are versioned with Alembic. The baseline revision matches the models; existing databases created before Alembic was added just need a stamp:
+
+```bash
+cd backend
+# point alembic at the same DATABASE_URL as the app (reads .env)
+alembic stamp head          # existing DBs (one-time)
+alembic upgrade head        # fresh or updated DBs
+alembic revision --autogenerate -m "describe change"   # after editing models.py
+```
+
+### Tests
+
+Backend test suite (public API, admin auth/CRUD/media, SEO endpoints — uses a throwaway SQLite DB, safe to run any time):
+
+```bash
+cd backend
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
+
 ### Customer Frontend
 
 ```bash
@@ -179,10 +211,14 @@ Base path: `/api/v1`
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/categories` | List categories |
-| GET | `/ornaments?category=` | List ornaments (optionally filtered) |
+| GET | `/ornaments?category=&q=&purity=&sort=&page=&page_size=` | List ornaments (filter / search / sort / paginate, returns `OrnamentList` envelope) |
 | GET | `/ornaments/{id}` | Ornament detail with media |
+| GET | `/purities` | Distinct purity values in the catalogue |
 | GET | `/rates/current` | Today's gold & silver rates |
+| GET | `/rates/history?days=30` | Daily rate history (chart data) |
 | POST | `/enquiries` | Submit an enquiry |
+| GET | `/robots.txt` | Dynamic robots.txt (noindex on admin paths) |
+| GET | `/sitemap.xml` | Dynamic sitemap of categories + ornaments |
 
 ### Admin (JWT required)
 | Method | Endpoint | Description |
@@ -190,11 +226,15 @@ Base path: `/api/v1`
 | POST | `/admin/login` | Login (sets HTTP-only cookie) |
 | POST | `/admin/logout` | Logout |
 | GET | `/admin/me` | Current admin profile |
-| GET/POST | `/admin/ornaments` | List / create ornaments |
-| GET/PUT/DELETE | `/admin/ornaments/{id}` | Read / update / delete |
+| PUT | `/admin/me` | Update display name |
+| POST | `/admin/change-password` | Change password (needs current password) |
+| GET | `/admin/stats` | Dashboard analytics |
+| GET | `/admin/ornaments?q=&visible=&limit=` | List / search ornaments |
+| POST | `/admin/ornaments` | Create ornament |
+| GET/PUT/DELETE | `/admin/ornaments/{id}` | Read / update / delete (media files removed from disk) |
 | PATCH | `/admin/ornaments/{id}/visibility` | Show / hide |
 | POST | `/admin/ornaments/{id}/media` | Upload photo or 3D model |
-| DELETE | `/admin/media/{id}` | Delete media |
+| DELETE | `/admin/media/{id}` | Delete media (removes file from disk) |
 | GET/POST | `/admin/categories` | List / create categories |
 | PUT/DELETE | `/admin/categories/{id}` | Update / delete |
 | GET | `/admin/rates/history` | Rate history |

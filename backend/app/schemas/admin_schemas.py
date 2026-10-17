@@ -1,4 +1,4 @@
-from typing import Optional
+﻿from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -55,9 +55,16 @@ class AdminRateHistoryItem(BaseModel):
     set_by_admin_id: Optional[int] = None
     created_at: object
 
-    class Config:
-        from_attributes = True
 
 
 class EnquiryStatusUpdate(BaseModel):
     status: str = Field(pattern="^(new|read|resolved)$")
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class AdminProfileUpdate(BaseModel):
+    full_name: Optional[str] = Field(default=None, max_length=100)

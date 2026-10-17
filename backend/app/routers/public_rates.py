@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Depends
+﻿from collections import defaultdict
+from datetime import timedelta
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.timeutils import utcnow
 from app.models.models import Rate
-from app.schemas.schemas import CurrentRates, RateInfo
+from app.schemas.schemas import CurrentRates, RateHistory, RateInfo, RatePoint
 
 router = APIRouter(prefix="/rates", tags=["public-rates"])
 
@@ -27,3 +31,28 @@ def current_rates(db: Session = Depends(get_db)):
         gold=_info(gold) if gold else None,
         silver=_info(silver) if silver else None,
     )
+
+
+@router.get("/history", response_model=RateHistory)
+def rate_history(
+    days: int = Query(30, ge=1, le=180), db: Session = Depends(get_db)
+):
+    cutoff = utcnow() - timedelta(days=days)
+    rows = (
+        db.query(Rate)
+        .filter(Rate.created_at >= cutoff)
+        .order_by(Rate.created_at.asc())
+        .all()
+    )
+
+    latest_per_day = {}
+    for r in rows:
+        latest_per_day[(r.metal, r.created_at.date())] = r
+
+    buckets = defaultdict(list)
+    for (metal, day), r in sorted(latest_per_day.items(), key=lambda kv: kv[0][1]):
+        buckets[metal].append(
+            RatePoint(date=day.isoformat(), rate_value=float(r.rate_value))
+        )
+
+    return RateHistory(gold=buckets["gold"], silver=buckets["silver"])

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -22,7 +22,7 @@ def create_enquiry(
             .first()
         )
         if not ornament:
-            return {"id": None, "error": "Ornament not found"}
+            raise HTTPException(status_code=404, detail="Ornament not found")
     enquiry = Enquiry(
         ornament_id=payload.ornament_id,
         customer_name=payload.customer_name.strip(),

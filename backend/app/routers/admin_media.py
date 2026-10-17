@@ -10,7 +10,7 @@ from app.core.deps import get_current_admin
 from app.models.models import Ornament, OrnamentMedia
 
 router = APIRouter(
-    prefix="/admin/ornaments",
+    prefix="/admin",
     tags=["admin-media"],
     dependencies=[Depends(get_current_admin)],
 )
@@ -26,7 +26,25 @@ ALLOWED_MODEL = {
 }
 
 
-@router.post("/{ornament_id}/media")
+def delete_media_file(url: str) -> None:
+    marker = "/media/"
+    idx = url.find(marker)
+    if idx == -1:
+        return
+    relative = url[idx + len(marker):].split("?", 1)[0]
+    root = settings.MEDIA_STORAGE_PATH.resolve()
+    try:
+        target = (root / relative).resolve()
+    except (OSError, ValueError):
+        return
+    if target.is_relative_to(root) and target.is_file():
+        try:
+            target.unlink()
+        except OSError:
+            pass
+
+
+@router.post("/ornaments/{ornament_id}/media")
 async def upload_media(
     ornament_id: int,
     media_type: str = Form(...),
@@ -92,6 +110,8 @@ def delete_media(media_id: int, db: Session = Depends(get_db)):
         o = db.query(Ornament).filter(Ornament.id == media.ornament_id).first()
         if o and o.model_url == media.url:
             o.model_url = None
+    url = media.url
     db.delete(media)
     db.commit()
+    delete_media_file(url)
     return {"ok": True}

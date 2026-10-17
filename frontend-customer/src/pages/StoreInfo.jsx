@@ -1,4 +1,11 @@
+import { useEffect } from 'react'
+import { SHOP_ADDRESS, SHOP_PHONE, telLink, waLink } from '../lib/shop.js'
+
 export default function StoreInfo() {
+  useEffect(() => {
+    document.title = `Visit Our Store · Shree Om Jwellers`
+  }, [])
+
   return (
     <div style={{ padding: '16px 16px 24px' }}>
       <div className="page-head" style={{ padding: 0, marginBottom: '16px' }}>
@@ -11,7 +18,7 @@ export default function StoreInfo() {
       <div className="info-block">
         <h4>Address</h4>
         <p>Shree Om Jwellers</p>
-        <p>Main Market Road,<br />Your City, Your State — 123456</p>
+        <p>{SHOP_ADDRESS[0]}<br />{SHOP_ADDRESS[1]}</p>
       </div>
 
       <div className="info-block">
@@ -32,13 +39,13 @@ export default function StoreInfo() {
 
       <div className="info-block">
         <h4>Contact</h4>
-        <p>Phone: +91 98765 43210</p>
-        <p>WhatsApp: +91 98765 43210</p>
+        <p>Phone: {SHOP_PHONE}</p>
+        <p>WhatsApp: {SHOP_PHONE}</p>
       </div>
 
       <div className="quick-contact">
-        <a className="whatsapp" href="https://wa.me/919876543210" target="_blank" rel="noreferrer">WhatsApp</a>
-        <a className="call" href="tel:+919876543210">Call Shop</a>
+        <a className="whatsapp" href={waLink()} target="_blank" rel="noreferrer">WhatsApp</a>
+        <a className="call" href={telLink()}>Call Shop</a>
       </div>
     </div>
   )

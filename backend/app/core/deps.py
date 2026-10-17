@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
@@ -35,6 +33,4 @@ def get_current_admin(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Admin not found",
         )
-    admin.last_login_at = datetime.utcnow()
-    db.commit()
     return admin

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 
 function formatTime(iso) {
@@ -26,6 +27,7 @@ function BubbleCard({ title, data, metal }) {
         <div className="rrow"><span className="k">Purity</span><span>{data.purity_reference}</span></div>
       )}
       <div className="upd">Updated: {formatTime(data.updated_at)}</div>
+      <Link to="/rates" className="rate-more">View rate chart →</Link>
     </div>
   )
 }

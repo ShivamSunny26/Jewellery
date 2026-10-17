@@ -8,6 +8,14 @@ function fmtTime(iso) {
     d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
 }
 
+function waNumber(phone) {
+  const digits = String(phone || '').replace(/\D/g, '')
+  if (digits.length >= 12 && digits.startsWith('91')) return digits
+  if (digits.length === 10) return `91${digits}`
+  if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`
+  return digits
+}
+
 export default function Enquiries() {
   const [filter, setFilter] = useState('')
   const [items, setItems] = useState([])
@@ -20,8 +28,12 @@ export default function Enquiries() {
   useEffect(load, [filter])
 
   async function setStatus(e, status) {
-    await api.setEnquiryStatus(e.id, status)
-    load()
+    try {
+      await api.setEnquiryStatus(e.id, status)
+      load()
+    } catch (err) {
+      alert(`Could not update enquiry: ${err.message}`)
+    }
   }
 
   const filters = [['', 'All'], ['new', 'New'], ['read', 'Read'], ['resolved', 'Resolved']]
@@ -64,7 +76,7 @@ export default function Enquiries() {
               {e.message && <div className="eq-msg">{e.message}</div>}
               <div className="eq-actions">
                 <a className="btn-sm btn-gold-sm" href={`tel:${e.customer_phone}`} style={{ textAlign: 'center' }}>Call</a>
-                <a className="btn-sm btn-ghost-sm" href={`https://wa.me/91${e.customer_phone}`} target="_blank" rel="noreferrer" style={{ textAlign: 'center' }}>WhatsApp</a>
+                <a className="btn-sm btn-ghost-sm" href={`https://wa.me/${waNumber(e.customer_phone)}`} target="_blank" rel="noreferrer" style={{ textAlign: 'center' }}>WhatsApp</a>
                 {e.status !== 'resolved' && (
                   <button className="btn-sm btn-ghost-sm" onClick={() => setStatus(e, 'resolved')}>Mark Resolved</button>
                 )}

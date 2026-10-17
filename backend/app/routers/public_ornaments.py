@@ -1,16 +1,25 @@
+import math
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.models.models import Category, Ornament
-from app.schemas.schemas import OrnamentCard, OrnamentDetail
+from app.schemas.schemas import OrnamentCard, OrnamentDetail, OrnamentList
 
 router = APIRouter(prefix="/ornaments", tags=["public-ornaments"])
 
+SORT_OPTIONS = {
+    "newest": (Ornament.created_at.desc(), Ornament.id.desc()),
+    "oldest": (Ornament.created_at.asc(), Ornament.id.asc()),
+    "name": (Ornament.name.asc(),),
+    "weight_asc": (Ornament.approx_weight_grams.asc(), Ornament.id.asc()),
+    "weight_desc": (Ornament.approx_weight_grams.desc(), Ornament.id.desc()),
+}
 
-def _card(o: Ornament, db: Session) -> OrnamentCard:
+
+def _card(o: Ornament) -> OrnamentCard:
     thumbnail = None
     for m in o.media:
         if m.media_type == "photo":
@@ -28,18 +37,60 @@ def _card(o: Ornament, db: Session) -> OrnamentCard:
     )
 
 
-@router.get("", response_model=list[OrnamentCard])
+@router.get("/purities", response_model=list[str])
+def list_purities(db: Session = Depends(get_db)):
+    rows = (
+        db.query(Ornament.purity)
+        .filter(Ornament.is_visible == True, Ornament.purity.isnot(None))
+        .distinct()
+        .all()
+    )
+    return sorted({r[0].strip() for r in rows if r[0] and r[0].strip()})
+
+
+@router.get("", response_model=OrnamentList)
 def list_ornaments(
-    category: Optional[str] = None, db: Session = Depends(get_db)
+    category: Optional[str] = None,
+    q: Optional[str] = None,
+    purity: Optional[str] = None,
+    sort: str = Query("newest", pattern="^(newest|oldest|name|weight_asc|weight_desc)$"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(12, ge=1, le=60),
+    db: Session = Depends(get_db),
 ):
-    q = db.query(Ornament).filter(Ornament.is_visible == True)
+    query = db.query(Ornament).filter(Ornament.is_visible == True)
+
     if category:
         cat = db.query(Category).filter(Category.slug == category).first()
         if not cat:
-            return []
-        q = q.filter(Ornament.category_id == cat.id)
-    ornaments = q.options(joinedload(Ornament.media), joinedload(Ornament.category)).all()
-    return [_card(o, db) for o in ornaments]
+            return OrnamentList(items=[], total=0, page=page, page_size=page_size, pages=0)
+        query = query.filter(Ornament.category_id == cat.id)
+
+    if q:
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            Ornament.name.ilike(term) | Ornament.description.ilike(term)
+        )
+
+    if purity:
+        query = query.filter(Ornament.purity.ilike(purity.strip()))
+
+    total = query.count()
+    pages = math.ceil(total / page_size) if total else 0
+    rows = (
+        query.options(joinedload(Ornament.media), joinedload(Ornament.category))
+        .order_by(*SORT_OPTIONS[sort])
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    return OrnamentList(
+        items=[_card(o) for o in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
+    )
 
 
 @router.get("/{ornament_id}", response_model=OrnamentDetail)

@@ -9,8 +9,10 @@ async function request(path, options = {}) {
     ...options
   })
   if (res.status === 401) {
-    window.location.href = '/login'
-    throw new Error('Not authenticated')
+    window.dispatchEvent(new Event('auth:401'))
+    const err = new Error('Not authenticated')
+    err.status = 401
+    throw err
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -24,6 +26,10 @@ export const api = {
   login: (u, p) => request('/admin/login', { method: 'POST', body: JSON.stringify({ username: u, password: p }) }),
   logout: () => request('/admin/logout', { method: 'POST' }),
   me: () => request('/admin/me'),
+  changePassword: (current_password, new_password) =>
+    request('/admin/change-password', { method: 'POST', body: JSON.stringify({ current_password, new_password }) }),
+  updateProfile: (full_name) => request('/admin/me', { method: 'PUT', body: JSON.stringify({ full_name }) }),
+  stats: () => request('/admin/stats'),
 
   ornaments: () => request('/admin/ornaments'),
   ornament: (id) => request(`/admin/ornaments/${id}`),
@@ -44,8 +50,10 @@ export const api = {
   updateCategory: (id, data) => request(`/admin/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCategory: (id) => request(`/admin/categories/${id}`, { method: 'DELETE' }),
 
-  rateHistory: (metal) => request(`/admin/rates/history?metal=${metal}&limit=20`),
+  rateHistory: (metal) => request(`/admin/rates/history?metal=${metal}&limit=30`),
   setRate: (data) => request('/admin/rates', { method: 'POST', body: JSON.stringify(data) }),
+  currentRates: () => request('/rates/current'),
+  rateHistoryPublic: (days = 30) => request(`/rates/history?days=${days}`),
 
   enquiries: (status) => request(`/admin/enquiries${status ? `?status=${status}` : ''}`),
   setEnquiryStatus: (id, status) => request(`/admin/enquiries/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })

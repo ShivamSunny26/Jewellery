@@ -50,7 +50,7 @@ def update_category(
     cat = db.query(Category).filter(Category.id == category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
-    data = payload.dict(exclude_unset=True)
+    data = payload.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(cat, k, v)
     db.commit()
