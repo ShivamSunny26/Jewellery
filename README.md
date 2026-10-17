@@ -116,7 +116,9 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
+# Configure environment (copy the template, then edit)
+cp .env.example .env
+# Windows (cmd): copy .env.example .env
 # Edit .env and set:
 #   DATABASE_URL        e.g. postgresql://user:pass@localhost:5432/shreeomjwellers
 #   JWT_SECRET          a long random string

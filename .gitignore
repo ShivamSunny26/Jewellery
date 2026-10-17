@@ -1,0 +1,40 @@
+# --- Secrets / local config ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Node / frontend builds ---
+node_modules/
+dist/
+build/
+.vite/
+*.local
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Runtime / user uploads (not source) ---
+backend/media/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
