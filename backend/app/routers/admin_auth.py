@@ -27,12 +27,13 @@ def login(
             detail="Invalid username or password",
         )
     token = create_access_token(admin.id, admin.username)
+    cross_site = settings.COOKIE_DOMAIN != "localhost"
     response.set_cookie(
         key=settings.COOKIE_NAME,
         value=token,
         httponly=True,
-        secure=settings.COOKIE_DOMAIN != "localhost",
-        samesite="strict",
+        secure=cross_site,
+        samesite="none" if cross_site else "lax",
         max_age=settings.JWT_EXPIRE_MINUTES * 60,
         path="/",
     )
