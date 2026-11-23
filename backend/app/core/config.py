@@ -7,14 +7,18 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+ENV = os.getenv("ENV", "development").lower()
+IS_PRODUCTION = ENV == "production"
+
 
 class Settings:
+    ENV: str = ENV
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/shreeomjwellers",
+        "" if IS_PRODUCTION else "postgresql://postgres:postgres@localhost:5432/shreeomjwellers",
     )
     JWT_SECRET: str = os.getenv(
-        "JWT_SECRET", "dev-only-secret-change-me-in-production-please-0123456789"
+        "JWT_SECRET", "" if IS_PRODUCTION else "dev-only-secret-change-me-in-production-please-0123456789"
     )
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "720"))
@@ -37,3 +41,16 @@ class Settings:
 
 
 settings = Settings()
+
+if IS_PRODUCTION:
+    missing = []
+    if not settings.DATABASE_URL:
+        missing.append("DATABASE_URL")
+    if not settings.JWT_SECRET or settings.JWT_SECRET.startswith("dev-only"):
+        missing.append("JWT_SECRET")
+    if missing:
+        raise RuntimeError(
+            "Missing required production environment variables: " + ", ".join(missing)
+        )
+    if settings.COOKIE_DOMAIN == "localhost":
+        raise RuntimeError("COOKIE_DOMAIN must not be 'localhost' in production")
