@@ -59,5 +59,8 @@ export const api = {
   rateHistoryPublic: (days = 30) => request(`/rates/history?days=${days}`),
 
   enquiries: (status) => request(`/admin/enquiries${status ? `?status=${status}` : ''}`),
-  setEnquiryStatus: (id, status) => request(`/admin/enquiries/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
+  setEnquiryStatus: (id, status) => request(`/admin/enquiries/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+
+  settings: () => request('/admin/settings'),
+  updateSettings: (data) => request('/admin/settings', { method: 'PUT', body: JSON.stringify(data) })
 }

@@ -9,6 +9,7 @@ import Categories from './pages/Categories.jsx'
 import Rates from './pages/Rates.jsx'
 import Enquiries from './pages/Enquiries.jsx'
 import Account from './pages/Account.jsx'
+import Settings from './pages/Settings.jsx'
 
 function AuthGuard({ children }) {
   const [status, setStatus] = useState('loading')
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="/rates" element={<AuthGuard><Rates /></AuthGuard>} />
         <Route path="/enquiries" element={<AuthGuard><Enquiries /></AuthGuard>} />
         <Route path="/account" element={<AuthGuard><Account admin={admin} onProfileUpdate={setAdmin} /></AuthGuard>} />
+        <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {location.pathname !== '/login' && (

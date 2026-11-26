@@ -111,3 +111,20 @@ class Enquiry(Base):
     created_at = Column(DateTime, default=utcnow)
 
     ornament = relationship("Ornament", back_populates="enquiries")
+
+
+class ShopSetting(Base):
+    __tablename__ = "shop_settings"
+
+    id = Column(Integer, primary_key=True)
+    shop_name = Column(String(120), default="Shree Om Jwellers")
+    address_line1 = Column(String(255), default="")
+    address_line2 = Column(String(255), default="")
+    phone = Column(String(30), default="")
+    whatsapp_phone = Column(String(30), default="")
+    map_embed_url = Column(String(500), default="")
+    show_map = Column(Boolean, default=True)
+    show_whatsapp = Column(Boolean, default=True)
+    show_whatsapp_fab = Column(Boolean, default=True)
+    show_enquiry = Column(Boolean, default=True)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)

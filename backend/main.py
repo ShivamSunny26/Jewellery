@@ -18,10 +18,12 @@ from app.routers import (
     admin_media,
     admin_ornaments,
     admin_rates,
+    admin_settings,
     admin_stats,
     public_categories,
     public_enquiries,
     public_ornaments,
+    public_settings,
     public_rates,
     public_seo,
 )
@@ -99,6 +101,7 @@ app.include_router(public_seo.router)
 app.include_router(public_categories.router, prefix=API_PREFIX)
 app.include_router(public_ornaments.router, prefix=API_PREFIX)
 app.include_router(public_rates.router, prefix=API_PREFIX)
+app.include_router(public_settings.router, prefix=API_PREFIX)
 app.include_router(public_enquiries.router, prefix=API_PREFIX)
 app.include_router(admin_auth.router, prefix=API_PREFIX)
 app.include_router(admin_ornaments.router, prefix=API_PREFIX)
@@ -106,6 +109,7 @@ app.include_router(admin_media.router, prefix=API_PREFIX)
 app.include_router(admin_categories.router, prefix=API_PREFIX)
 app.include_router(admin_rates.router, prefix=API_PREFIX)
 app.include_router(admin_enquiries.router, prefix=API_PREFIX)
+app.include_router(admin_settings.router, prefix=API_PREFIX)
 app.include_router(admin_stats.router, prefix=API_PREFIX)
 
 if settings.MEDIA_STORAGE_BACKEND != "supabase":

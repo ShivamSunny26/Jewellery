@@ -34,5 +34,6 @@ export const api = {
   rates: () => request('/rates/current'),
   rateHistory: (days = 30) => request(`/rates/history${qs({ days })}`),
   enquiry: (payload) =>
-    request('/enquiries', { method: 'POST', body: JSON.stringify(payload) })
+    request('/enquiries', { method: 'POST', body: JSON.stringify(payload) }),
+  settings: () => request('/settings')
 }

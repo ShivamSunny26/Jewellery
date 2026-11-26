@@ -94,3 +94,30 @@ class AdminProfile(BaseModel):
     full_name: Optional[str] = None
     last_login_at: Optional[datetime] = None
 
+
+
+class ShopSettingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    shop_name: str
+    address_line1: str
+    address_line2: str
+    phone: str
+    whatsapp_phone: str
+    map_embed_url: str
+    show_map: bool
+    show_whatsapp: bool
+    show_whatsapp_fab: bool
+    show_enquiry: bool
+
+class ShopSettingUpdate(BaseModel):
+    shop_name: str | None = None
+    address_line1: str | None = None
+    address_line2: str | None = None
+    phone: str | None = None
+    whatsapp_phone: str | None = None
+    map_embed_url: str | None = None
+    show_map: bool | None = None
+    show_whatsapp: bool | None = None
+    show_whatsapp_fab: bool | None = None
+    show_enquiry: bool | None = None
+
