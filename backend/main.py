@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.responses import FileResponse
@@ -60,16 +60,40 @@ async def security_headers(request, call_next):
     # Swagger/ReDoc CDN so both the site and /docs render in production.
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "img-src 'self' data: blob: https://fastapi.tiangolo.com; "
+        "img-src 'self' data: blob: https://fastapi.tiangolo.com https://*.supabase.co; "
+        "media-src 'self' https://*.supabase.co blob:; "
+        "model-src 'self' https://*.supabase.co blob:; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
         "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; "
         "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
-        "connect-src 'self' https://jewellery-ctnt.onrender.com"
+        "connect-src 'self' https://jewellery-ctnt.onrender.com https://*.supabase.co"
     )
     return response
 
 
 API_PREFIX = "/api/v1"
+
+# Keep-alive / health endpoints exposed under the API prefix as well so external
+# pingers (and the frontend) can reach them at /api/v1/...
+keepalive_router = APIRouter()
+
+
+@keepalive_router.get("/health")
+def api_health():
+    return {"status": "ok"}
+
+
+@keepalive_router.get("/ping")
+def api_ping():
+    return {"message": "pong"}
+
+
+@keepalive_router.get("/keep-alive")
+def api_keep_alive():
+    return {"status": "ok"}
+
+
+app.include_router(keepalive_router, prefix=API_PREFIX)
 
 app.include_router(public_seo.router)
 app.include_router(public_categories.router, prefix=API_PREFIX)
@@ -84,12 +108,23 @@ app.include_router(admin_rates.router, prefix=API_PREFIX)
 app.include_router(admin_enquiries.router, prefix=API_PREFIX)
 app.include_router(admin_stats.router, prefix=API_PREFIX)
 
-settings.MEDIA_STORAGE_PATH.mkdir(parents=True, exist_ok=True)
-app.mount("/media", StaticFiles(directory=str(settings.MEDIA_STORAGE_PATH)), name="media")
+if settings.MEDIA_STORAGE_BACKEND != "supabase":
+    settings.MEDIA_STORAGE_PATH.mkdir(parents=True, exist_ok=True)
+    app.mount("/media", StaticFiles(directory=str(settings.MEDIA_STORAGE_PATH)), name="media")
 
 
 @app.get("/health")
 def health():
+    return {"status": "ok"}
+
+
+@app.get("/ping")
+def ping():
+    return {"message": "pong"}
+
+
+@app.get("/keep-alive")
+def keep_alive():
     return {"status": "ok"}
 
 
@@ -105,7 +140,7 @@ if FRONTEND_DIST.is_dir():
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str):
-        if full_path.startswith(("api/", "media/", "docs", "redoc", "openapi.json", "health")):
+        if full_path.startswith(("api/", "media/", "docs", "redoc", "openapi.json", "health", "ping", "keep")):
             raise HTTPException(status_code=404, detail="Not Found")
         candidate = (FRONTEND_DIST / full_path).resolve()
         try:

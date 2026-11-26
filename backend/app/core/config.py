@@ -53,9 +53,15 @@ class Settings:
 
     # --- Media ---
     MEDIA_STORAGE_PATH: Path = Path(os.getenv("MEDIA_STORAGE_PATH", str(BASE_DIR / "media")))
+    MEDIA_STORAGE_BACKEND: str = os.getenv("MEDIA_STORAGE_BACKEND", "local").strip().lower()
     MAX_PHOTO_MB: int = int(os.getenv("MAX_PHOTO_MB", "5"))
     MAX_MODEL_MB: int = int(os.getenv("MAX_MODEL_MB", "15"))
     PUBLIC_BASE_URL: str = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").strip().rstrip("/")
+
+    # --- Supabase Storage ---
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "").strip()
+    SUPABASE_BUCKET: str = os.getenv("SUPABASE_BUCKET", "").strip()
 
 
 settings = Settings()

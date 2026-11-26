@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.storage import delete_media_file, save_media
 from app.core.deps import get_current_admin
 from app.models.models import Ornament, OrnamentMedia
 
@@ -24,24 +25,6 @@ ALLOWED_MODEL = {
     "model/gltf-binary": ".glb",
     "model/gltf+json": ".gltf",
 }
-
-
-def delete_media_file(url: str) -> None:
-    marker = "/media/"
-    idx = url.find(marker)
-    if idx == -1:
-        return
-    relative = url[idx + len(marker):].split("?", 1)[0]
-    root = settings.MEDIA_STORAGE_PATH.resolve()
-    try:
-        target = (root / relative).resolve()
-    except (OSError, ValueError):
-        return
-    if target.is_relative_to(root) and target.is_file():
-        try:
-            target.unlink()
-        except OSError:
-            pass
 
 
 @router.post("/ornaments/{ornament_id}/media")
@@ -81,14 +64,9 @@ async def upload_media(
         raise HTTPException(status_code=422, detail="media_type must be photo or model")
 
     filename = f"{uuid.uuid4().hex}{ext}"
-    dest_dir = settings.MEDIA_STORAGE_PATH / subdir
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / filename
 
     content = await file.read()
-    dest.write_bytes(content)
-
-    public_url = f"{settings.PUBLIC_BASE_URL}/media/{subdir}/{filename}"
+    public_url = save_media(subdir, filename, content, file.content_type)
 
     media = OrnamentMedia(
         ornament_id=ornament_id, media_type=media_type, url=public_url

@@ -1,6 +1,7 @@
-const API = import.meta.env.PROD
-  ? 'https://jewellery-ctnt.onrender.com/api/v1'
-  : '/api/v1'
+const API = import.meta.env.VITE_API_URL
+  || (import.meta.env.PROD
+    ? 'https://jewellery-ctnt.onrender.com/api/v1'
+    : '/api/v1')
 
 async function request(path, options = {}) {
   const res = await fetch(`${API}${path}`, {

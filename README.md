@@ -192,7 +192,7 @@ Both frontends proxy `/api` and `/media` to the backend at `http://localhost:800
 
 | Item | Value |
 |---|---|
-| Admin login | **admin** / **admin123** |
+| Admin login | **admin** / **admin123**, **admin1** / **admin123** |
 | Categories | Rings, Necklaces, Bangles, Earrings, Bridal Sets |
 | Sample ornaments | 6 (with placeholder SVG photos) |
 | Gold rate | ₹7,185.00 / gram (22K) |

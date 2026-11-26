@@ -3,6 +3,7 @@ from pathlib import Path
 
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine
+from app.core.storage import save_media
 from app.core.security import hash_password
 from app.models.models import Admin, Category, Enquiry, Ornament, OrnamentMedia, Rate
 
@@ -75,18 +76,14 @@ ORNAMENTS = [
 
 
 def make_placeholder(subdir: str, label: str, color: str) -> str:
-    dest_dir = settings.MEDIA_STORAGE_PATH / subdir
-    dest_dir.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}.svg"
-    path = dest_dir / name
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600">
   <rect width="600" height="600" fill="{color}"/>
   <text x="300" y="290" font-family="Georgia, serif" font-size="30" fill="#F5EFE6" text-anchor="middle">{label}</text>
   <text x="300" y="330" font-family="Arial" font-size="18" fill="#E5C158" text-anchor="middle">Shree Om Jwellers</text>
   <text x="300" y="365" font-family="Arial" font-size="12" fill="#8A7A5A" text-anchor="middle">© 2026 Shivam@</text>
 </svg>"""
-    path.write_text(svg, encoding="utf-8")
-    return f"{BASE}/media/{subdir}/{name}"
+    return save_media(subdir, name, svg.encode("utf-8"), "image/svg+xml")
 
 
 def _populate(db):
@@ -96,6 +93,14 @@ def _populate(db):
         full_name="Shop Owner",
     )
     db.add(admin)
+    db.commit()
+
+    admin1 = Admin(
+        username="admin1",
+        password_hash=hash_password("admin123"),
+        full_name="Admin One",
+    )
+    db.add(admin1)
     db.commit()
 
     slug_map = {}

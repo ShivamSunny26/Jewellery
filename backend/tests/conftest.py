@@ -5,6 +5,8 @@ from pathlib import Path
 _TMP = Path(tempfile.mkdtemp(prefix="jewellery_tests_"))
 os.environ["DATABASE_URL"] = f"sqlite:///{(_TMP / 'test.db').as_posix()}"
 os.environ["MEDIA_STORAGE_PATH"] = str(_TMP / "media")
+os.environ["MEDIA_STORAGE_BACKEND"] = "local"
+os.environ["PUBLIC_BASE_URL"] = "http://localhost:8000"
 os.environ["COOKIE_DOMAIN"] = "localhost"
 os.environ["JWT_SECRET"] = "test-secret-do-not-use-in-production"
 
